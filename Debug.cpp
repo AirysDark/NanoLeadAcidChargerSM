@@ -1,5 +1,5 @@
 #include "Debug.h"
-#include "Config.h"
+#include "ChargerMonitorConfig.h"
 
 namespace Debug {
 
