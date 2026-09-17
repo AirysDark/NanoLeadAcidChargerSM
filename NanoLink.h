@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include "Config.h"
+#include "ChargerMonitorConfig.h"
 
 struct ChargerStatus {
   bool valid = false;
