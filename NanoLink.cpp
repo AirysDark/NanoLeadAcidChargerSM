@@ -124,6 +124,7 @@ void NanoLink::parseStatus(const String& line) {
   const String bat = valueForKey(line, "BAT");
   const String btemp = valueForKey(line, "BTEMP");
   const String ntemp = valueForKey(line, "NTEMP");
+  const String nraw = valueForKey(line, "NRAW");
   const String charger = valueForKey(line, "CHARGER");
   const String state = valueForKey(line, "STATE");
   const String mode = valueForKey(line, "MODE");
@@ -135,6 +136,7 @@ void NanoLink::parseStatus(const String& line) {
   if (_status.batteryTempValid) _status.batteryTempC = btemp.toFloat();
   _status.nanoTempValid = (ntemp.length() > 0 && ntemp != "INVALID");
   if (_status.nanoTempValid) _status.nanoTempC = ntemp.toFloat();
+  if (nraw.length() > 0) _status.nanoTempRawAdc = static_cast<uint16_t>(nraw.toInt());
   _status.chargerOn = (charger == "ON");
   _status.state = state;
   _status.mode = mode.length() ? mode : "UNKNOWN";
