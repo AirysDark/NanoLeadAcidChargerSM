@@ -24,8 +24,8 @@ constexpr unsigned long NANO_STATUS_POLL_MS = 1000UL;
 // If no STATUS response is received for this long, report Nano link offline.
 constexpr unsigned long NANO_LINK_TIMEOUT_MS = 5000UL;
 
-// Maximum line received from the Nano.
-constexpr size_t NANO_LINE_BUFFER_SIZE = 192;
+// STATUS now also contains temperature-sync telemetry.
+constexpr size_t NANO_LINE_BUFFER_SIZE = 256;
 
 // --------------------------- Wi-Fi ----------------------------
 // Hotspot only. The ESP8266 does NOT connect to any router.
