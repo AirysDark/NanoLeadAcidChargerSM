@@ -21,7 +21,7 @@ h1{font-size:1.45rem;margin:0 0 4px}.sub{color:#9aa7b2;margin-bottom:18px}
 </head>
 <body>
 <h1>Nano Lead-Acid Charger</h1>
-<div class="sub">ESP8266 live monitor</div>
+<div class="sub">ESP8266 direct hotspot monitor</div>
 <div class="grid">
   <div class="card"><div class="label">Battery</div><div id="bat" class="value">--</div></div>
   <div class="card"><div class="label">Charger</div><div id="charger" class="value">--</div></div>
@@ -29,11 +29,11 @@ h1{font-size:1.45rem;margin:0 0 4px}.sub{color:#9aa7b2;margin-bottom:18px}
   <div class="card"><div class="label">Nano / charger temp</div><div id="nt" class="value">--</div></div>
   <div class="card wide"><div class="label">State</div><div id="state" class="value small">--</div><div id="mode" class="foot"></div></div>
   <div class="card wide"><div class="label">Nano UART</div><div id="link" class="value small">--</div><div id="age" class="foot"></div></div>
-  <div class="card wide"><div class="label">Network</div><div id="network" class="value small">--</div><div id="ips" class="foot"></div></div>
+  <div class="card wide"><div class="label">Network</div><div class="value small ok">HOTSPOT</div><div id="ips" class="foot"></div></div>
   <div class="card wide"><div class="label">Controls</div><button id="auto" onclick="cmd('AUTO')">AUTO</button><button id="stop" onclick="cmd('STOP')">STOP CHARGING</button><button id="refresh" onclick="refreshNow()">REFRESH</button><div id="cmdResult" class="foot"></div></div>
   <div class="card wide"><div class="label">Last Nano line</div><pre id="raw">--</pre></div>
 </div>
-<div class="foot">The ESP8266 hotspot stays active even when the ESP8266 is also connected to your router.</div>
+<div class="foot">Connect directly to the ESP8266 hotspot and open 192.168.4.1.</div>
 <script>
 const intervalMs = %REFRESH_MS%;
 function fmt(v,suffix,digits=2){return (v===null||v===undefined)?'INVALID':Number(v).toFixed(digits)+suffix}
@@ -49,8 +49,7 @@ async function refreshNow(){
   document.getElementById('mode').textContent='Mode: '+d.mode;
   const ln=document.getElementById('link'); ln.textContent=d.nanoConnected?'CONNECTED':'OFFLINE'; ln.className='value small '+(d.nanoConnected?'ok':'bad');
   document.getElementById('age').textContent=d.statusAgeMs===null?'No status received':'Last status '+d.statusAgeMs+' ms ago';
-  document.getElementById('network').textContent=d.routerConnected?('ROUTER + HOTSPOT'):('HOTSPOT ONLY');
-  document.getElementById('ips').textContent='Hotspot: '+d.hotspotIp+(d.routerConnected?' | Router: '+d.routerIp+' ('+d.routerSsid+')':'');
+  document.getElementById('ips').textContent='Hotspot IP: '+d.hotspotIp;
   document.getElementById('raw').textContent=d.lastNanoLine||'--';
  }catch(e){const ln=document.getElementById('link');ln.textContent='WEB UPDATE ERROR';ln.className='value small bad';document.getElementById('age').textContent=String(e)}
 }
@@ -110,7 +109,6 @@ void WebUi::handleCommand() {
   command.trim();
   command.toUpperCase();
 
-  // Web interface only exposes the Nano commands that cannot bypass safety.
   const bool allowed =
       command == "PING" ||
       command == "STATUS" ||
@@ -133,8 +131,6 @@ void WebUi::handleCommand() {
 }
 
 void WebUi::handleNotFound() {
-  // A phone connected directly to the hotspot often probes arbitrary URLs.
-  // Redirect browser requests back to the local dashboard.
   _server.sendHeader("Location", String("http://") + _network.hotspotIP().toString() + "/", true);
   _server.send(302, "text/plain", "");
 }
@@ -143,7 +139,7 @@ String WebUi::buildStatusJson() const {
   const ChargerStatus& s = _nano.status();
 
   String json;
-  json.reserve(512);
+  json.reserve(384);
   json += '{';
 
   json += "\"nanoConnected\":";
@@ -184,14 +180,6 @@ String WebUi::buildStatusJson() const {
 
   json += ",\"hotspotIp\":\"";
   json += _network.hotspotIP().toString();
-  json += '"';
-
-  json += ",\"routerConnected\":";
-  json += _network.stationConnected() ? "true" : "false";
-  json += ",\"routerIp\":\"";
-  json += _network.stationConnected() ? _network.stationIP().toString() : String();
-  json += "\",\"routerSsid\":\"";
-  json += jsonEscape(_network.stationSSID());
   json += '"';
 
   json += '}';
