@@ -5,7 +5,8 @@
 NanoLink::NanoLink()
   : _serial(PIN_NANO_RX, PIN_NANO_TX),
     _length(0),
-    _lastPollMs(0) {
+    _lastPollMs(0),
+    _paused(false) {
   _line[0] = '\0';
 }
 
@@ -18,6 +19,8 @@ void NanoLink::begin() {
 }
 
 void NanoLink::update() {
+  if (_paused) return;
+
   readSerial();
   const unsigned long now = millis();
   if ((now - _lastPollMs) >= NANO_STATUS_POLL_MS) {
@@ -27,6 +30,8 @@ void NanoLink::update() {
 }
 
 void NanoLink::sendCommand(const String& command) {
+  if (_paused) return;
+
   String cmd = command;
   cmd.trim();
   if (cmd.length() == 0) return;
@@ -38,7 +43,25 @@ void NanoLink::sendCommand(const String& command) {
   }
 }
 
+void NanoLink::pause() {
+  _paused = true;
+}
+
+void NanoLink::resume() {
+  _serial.listen();
+  _paused = false;
+  _length = 0;
+  _line[0] = '\0';
+  _lastPollMs = millis();
+  delay(20);
+  sendCommand("PING");
+  sendCommand("STATUS");
+}
+
+bool NanoLink::paused() const { return _paused; }
+
 bool NanoLink::connected() const {
+  if (_paused) return false;
   if (!_status.valid || _status.receivedAtMs == 0) return false;
   return (millis() - _status.receivedAtMs) <= NANO_LINK_TIMEOUT_MS;
 }
