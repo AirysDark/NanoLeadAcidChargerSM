@@ -19,7 +19,6 @@ void NanoLink::begin() {
 
 void NanoLink::update() {
   readSerial();
-
   const unsigned long now = millis();
   if ((now - _lastPollMs) >= NANO_STATUS_POLL_MS) {
     _lastPollMs = now;
@@ -31,10 +30,8 @@ void NanoLink::sendCommand(const String& command) {
   String cmd = command;
   cmd.trim();
   if (cmd.length() == 0) return;
-
   _serial.print(cmd);
   _serial.print('\n');
-
   if (ENABLE_DEBUG) {
     Serial.print(F("[NANO TX] "));
     Serial.println(cmd);
@@ -51,23 +48,15 @@ unsigned long NanoLink::statusAgeMs() const {
   return millis() - _status.receivedAtMs;
 }
 
-const ChargerStatus& NanoLink::status() const {
-  return _status;
-}
-
-const String& NanoLink::lastLine() const {
-  return _lastLine;
-}
+const ChargerStatus& NanoLink::status() const { return _status; }
+const String& NanoLink::lastLine() const { return _lastLine; }
 
 void NanoLink::readSerial() {
-  while (_serial.available() > 0) {
-    handleChar(static_cast<char>(_serial.read()));
-  }
+  while (_serial.available() > 0) handleChar(static_cast<char>(_serial.read()));
 }
 
 void NanoLink::handleChar(char c) {
   if (c == '\r') return;
-
   if (c == '\n') {
     if (_length == 0) return;
     _line[_length] = '\0';
@@ -95,16 +84,13 @@ void NanoLink::handleLine() {
     Serial.println(_lastLine);
   }
 
-  if (_lastLine.startsWith("STATUS ")) {
-    parseStatus(_lastLine);
-  }
+  if (_lastLine.startsWith("STATUS ")) parseStatus(_lastLine);
 }
 
 String NanoLink::valueForKey(const String& line, const String& key) const {
   const String needle = key + "=";
   const int start = line.indexOf(needle);
   if (start < 0) return String();
-
   const int valueStart = start + needle.length();
   int end = line.indexOf(' ', valueStart);
   if (end < 0) end = line.length();
@@ -122,46 +108,50 @@ void NanoLink::parseStatus(const String& line) {
   if (bat.length() == 0 || charger.length() == 0 || state.length() == 0) return;
 
   _status.batteryVolts = bat.toFloat();
-
   _status.batteryTempValid = (btemp.length() > 0 && btemp != "INVALID");
   if (_status.batteryTempValid) _status.batteryTempC = btemp.toFloat();
-
   _status.nanoTempValid = (ntemp.length() > 0 && ntemp != "INVALID");
   if (_status.nanoTempValid) _status.nanoTempC = ntemp.toFloat();
-
   _status.chargerOn = (charger == "ON");
   _status.state = state;
   _status.mode = mode.length() ? mode : "UNKNOWN";
 
-  // Temperature sync.
   const String tsync = valueForKey(line, "TSYNC");
   const String tphase = valueForKey(line, "TPHASE");
   const String tdelta = valueForKey(line, "TDELTA");
-  const String tbase = valueForKey(line, "TBASE");
-  const String tbsamp = valueForKey(line, "TBSAMP");
-  const String tchg = valueForKey(line, "TCHG");
-  const String tcsamp = valueForKey(line, "TCSAMP");
-  const String tfinal = valueForKey(line, "TFINAL");
-  const String tready = valueForKey(line, "TREADY");
-  const String tnew = valueForKey(line, "TNEW");
-
   _status.tempSyncActive = (tsync == "ON");
   _status.tempSyncPhase = tphase.length() ? tphase : "OFF";
   _status.tempSyncDeltaValid = (tdelta.length() > 0 && tdelta != "INVALID");
   if (_status.tempSyncDeltaValid) _status.tempSyncDeltaC = tdelta.toFloat();
-  _status.tempSyncBaselineValid = (tbase.length() > 0 && tbase != "INVALID");
-  if (_status.tempSyncBaselineValid) _status.tempSyncBaselineC = tbase.toFloat();
-  _status.tempSyncBaselineSamples = tbsamp.length() ? static_cast<uint16_t>(tbsamp.toInt()) : 0U;
-  _status.tempSyncChargeValid = (tchg.length() > 0 && tchg != "INVALID");
-  if (_status.tempSyncChargeValid) _status.tempSyncChargeC = tchg.toFloat();
-  _status.tempSyncChargeSamples = tcsamp.length() ? static_cast<uint16_t>(tcsamp.toInt()) : 0U;
-  _status.tempSyncFinalValid = (tfinal.length() > 0 && tfinal != "INVALID");
-  if (_status.tempSyncFinalValid) _status.tempSyncFinalC = tfinal.toFloat();
-  _status.tempSyncReady = (tready == "YES");
-  _status.tempSyncNewOffsetValid = (tnew.length() > 0 && tnew != "INVALID");
-  if (_status.tempSyncNewOffsetValid) _status.tempSyncNewOffsetC = tnew.toFloat();
 
-  // Voltage divider calibration.
+  for (uint8_t i = 0; i < 3; ++i) {
+    const String prefix = String("T") + String(i + 1);
+    const String ext = valueForKey(line, prefix + "EXT");
+    const String raw = valueForKey(line, prefix + "RAW");
+    const String samples = valueForKey(line, prefix + "S");
+
+    _status.tempPointValid[i] = (ext.length() > 0 && ext != "INVALID");
+    if (_status.tempPointValid[i]) _status.tempPointExternalC[i] = ext.toFloat();
+
+    _status.tempPointRawValid[i] = (raw.length() > 0 && raw != "INVALID");
+    if (_status.tempPointRawValid[i]) _status.tempPointRaw[i] = raw.toFloat();
+
+    _status.tempPointSamples[i] = samples.length() ? static_cast<uint16_t>(samples.toInt()) : 0U;
+  }
+
+  const String tready = valueForKey(line, "TREADY");
+  const String tcalraw = valueForKey(line, "TCALRAW");
+  const String tcalc = valueForKey(line, "TCALC");
+  const String tcounts = valueForKey(line, "TCOUNTS");
+
+  _status.tempSyncReady = (tready == "YES");
+  _status.tempCalRawValid = (tcalraw.length() > 0 && tcalraw != "INVALID");
+  if (_status.tempCalRawValid) _status.tempCalRaw = tcalraw.toFloat();
+  _status.tempCalCValid = (tcalc.length() > 0 && tcalc != "INVALID");
+  if (_status.tempCalCValid) _status.tempCalC = tcalc.toFloat();
+  _status.tempCountsPerCValid = (tcounts.length() > 0 && tcounts != "INVALID");
+  if (_status.tempCountsPerCValid) _status.tempCountsPerC = tcounts.toFloat();
+
   const String vcal = valueForKey(line, "VCAL");
   const String vphase = valueForKey(line, "VPHASE");
   const String vsamp = valueForKey(line, "VSAMP");
