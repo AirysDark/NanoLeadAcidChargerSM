@@ -9,16 +9,8 @@ public:
   void begin();
   void update();
 
-  bool stationConnected() const;
-  IPAddress stationIP() const;
   IPAddress hotspotIP() const;
-  String stationSSID() const;
 
 private:
-  unsigned long _lastRouterAttemptMs;
-  bool _mdnsStarted;
-
   void startHotspot();
-  void startRouterConnection();
-  void updateMdns();
 };
