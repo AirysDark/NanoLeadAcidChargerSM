@@ -16,7 +16,7 @@ const char PAGE_HTML[] PROGMEM = R"HTML(
 :root{color-scheme:dark;background:#101317;color:#eef2f5;font-family:Arial,sans-serif}
 body{margin:0;padding:18px;max-width:760px;margin-inline:auto}
 h1{font-size:1.45rem;margin:0 0 4px}.sub{color:#9aa7b2;margin-bottom:18px}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{background:#191e24;border:1px solid #303841;border-radius:12px;padding:14px}.wide{grid-column:1/-1}.label{font-size:.78rem;color:#97a6b2;text-transform:uppercase;letter-spacing:.06em}.value{font-size:1.55rem;font-weight:700;margin-top:5px;word-break:break-word}.small{font-size:1rem}.ok{color:#71dc8c}.bad{color:#ff7878}.warn{color:#ffd36a}button{border:0;border-radius:10px;padding:12px 18px;margin:4px;font-size:1rem;font-weight:700;cursor:pointer}#auto{background:#4fc36a;color:#07120a}#stop{background:#e05252;color:white}#refresh{background:#39434d;color:white}.foot{color:#87939e;font-size:.8rem;margin-top:14px}pre{white-space:pre-wrap;word-break:break-word;margin:0;color:#aeb9c2}@media(max-width:520px){.grid{grid-template-columns:1fr}}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{background:#191e24;border:1px solid #303841;border-radius:12px;padding:14px}.wide{grid-column:1/-1}.label{font-size:.78rem;color:#97a6b2;text-transform:uppercase;letter-spacing:.06em}.value{font-size:1.55rem;font-weight:700;margin-top:5px;word-break:break-word}.small{font-size:1rem}.ok{color:#71dc8c}.bad{color:#ff7878}.warn{color:#ffd36a}button{border:0;border-radius:10px;padding:12px 18px;margin:4px;font-size:1rem;font-weight:700;cursor:pointer}#auto,#syncStart{background:#4fc36a;color:#07120a}#stop,#syncStop{background:#e05252;color:white}#refresh{background:#39434d;color:white}.foot{color:#87939e;font-size:.8rem;margin-top:10px}.syncrow{margin-top:7px;font-size:.95rem}.syncrow b{color:#eef2f5}pre{white-space:pre-wrap;word-break:break-word;margin:0;color:#aeb9c2}@media(max-width:520px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -25,9 +25,22 @@ h1{font-size:1.45rem;margin:0 0 4px}.sub{color:#9aa7b2;margin-bottom:18px}
 <div class="grid">
   <div class="card"><div class="label">Battery</div><div id="bat" class="value">--</div></div>
   <div class="card"><div class="label">Charger</div><div id="charger" class="value">--</div></div>
-  <div class="card"><div class="label">Battery temp</div><div id="bt" class="value">--</div></div>
+  <div class="card"><div class="label">External temp sensor</div><div id="bt" class="value">--</div><div class="foot">Battery sensor normally; case reference during TEMP SYNC.</div></div>
   <div class="card"><div class="label">Nano / charger temp</div><div id="nt" class="value">--</div></div>
   <div class="card wide"><div class="label">State</div><div id="state" class="value small">--</div><div id="mode" class="foot"></div></div>
+
+  <div class="card wide">
+    <div class="label">Temperature Sync</div>
+    <div id="tsyncState" class="value small">OFF</div>
+    <div class="syncrow">Current difference: <b id="tsyncDelta">--</b></div>
+    <div class="syncrow">Average correction: <b id="tsyncAvg">--</b></div>
+    <div class="syncrow">Recommended Nano offset: <b id="tsyncNew">--</b></div>
+    <div id="tsyncSamples" class="foot">Samples: 0</div>
+    <button id="syncStart" onclick="cmd('TSYNC START')">START TEMP SYNC</button>
+    <button id="syncStop" onclick="cmd('TSYNC STOP')">STOP TEMP SYNC</button>
+    <div class="foot">Put the external sensor next to the Nano inside the case and let both temperatures settle. TEMP SYNC does not force charging ON; the normal voltage and temperature safety logic stays active. Watch the Charger and State fields above while the test runs.</div>
+  </div>
+
   <div class="card wide"><div class="label">Nano UART</div><div id="link" class="value small">--</div><div id="age" class="foot"></div></div>
   <div class="card wide"><div class="label">Network</div><div class="value small ok">HOTSPOT</div><div id="ips" class="foot"></div></div>
   <div class="card wide"><div class="label">Controls</div><button id="auto" onclick="cmd('AUTO')">AUTO</button><button id="stop" onclick="cmd('STOP')">STOP CHARGING</button><button id="refresh" onclick="refreshNow()">REFRESH</button><div id="cmdResult" class="foot"></div></div>
@@ -47,6 +60,15 @@ async function refreshNow(){
   const ch=document.getElementById('charger'); ch.textContent=d.chargerOn?'ON':'OFF'; ch.className='value '+(d.chargerOn?'ok':'warn');
   document.getElementById('state').textContent=d.state;
   document.getElementById('mode').textContent='Mode: '+d.mode;
+
+  const ts=document.getElementById('tsyncState');
+  ts.textContent=d.tempSyncActive?'RUNNING':(d.tempSyncSamples>0?'STOPPED / RESULT SAVED':'OFF');
+  ts.className='value small '+(d.tempSyncActive?'ok':(d.tempSyncReady?'ok':'warn'));
+  document.getElementById('tsyncDelta').textContent=d.tempSyncDeltaValid?fmt(d.tempSyncDeltaC,' °C',2):'--';
+  document.getElementById('tsyncAvg').textContent=d.tempSyncAverageValid?fmt(d.tempSyncAverageC,' °C',2):'--';
+  document.getElementById('tsyncNew').textContent=d.tempSyncNewOffsetValid?fmt(d.tempSyncNewOffsetC,' °C',2):'--';
+  document.getElementById('tsyncSamples').textContent='Samples: '+d.tempSyncSamples+' | '+(d.tempSyncReady?'READY - use recommended offset':'collecting / not ready yet');
+
   const ln=document.getElementById('link'); ln.textContent=d.nanoConnected?'CONNECTED':'OFFLINE'; ln.className='value small '+(d.nanoConnected?'ok':'bad');
   document.getElementById('age').textContent=d.statusAgeMs===null?'No status received':'Last status '+d.statusAgeMs+' ms ago';
   document.getElementById('ips').textContent='Hotspot IP: '+d.hotspotIp;
@@ -55,7 +77,7 @@ async function refreshNow(){
 }
 async function cmd(c){
  const o=document.getElementById('cmdResult');o.textContent='Sending '+c+'...';
- try{const r=await fetch('/api/command?cmd='+encodeURIComponent(c),{method:'POST',cache:'no-store'});const d=await r.json();o.textContent=d.ok?'Sent: '+d.command:'Error: '+d.error;setTimeout(refreshNow,250)}catch(e){o.textContent='Command failed: '+e}
+ try{const r=await fetch('/api/command?cmd='+encodeURIComponent(c),{method:'POST',cache:'no-store'});const d=await r.json();o.textContent=d.ok?'Sent: '+d.command:'Error: '+d.error;setTimeout(refreshNow,350)}catch(e){o.textContent='Command failed: '+e}
 }
 refreshNow();setInterval(refreshNow,intervalMs);
 </script>
@@ -115,6 +137,9 @@ void WebUi::handleCommand() {
       command == "BATTERY" ||
       command == "TEMP" ||
       command == "STATE" ||
+      command == "TSYNC START" ||
+      command == "TSYNC STATUS" ||
+      command == "TSYNC STOP" ||
       command == "STOP" ||
       command == "AUTO" ||
       command == "HELP";
@@ -139,7 +164,7 @@ String WebUi::buildStatusJson() const {
   const ChargerStatus& s = _nano.status();
 
   String json;
-  json.reserve(384);
+  json.reserve(640);
   json += '{';
 
   json += "\"nanoConnected\":";
@@ -173,6 +198,28 @@ String WebUi::buildStatusJson() const {
   json += "\",\"mode\":\"";
   json += jsonEscape(s.mode);
   json += '"';
+
+  json += ",\"tempSyncActive\":";
+  json += s.tempSyncActive ? "true" : "false";
+  json += ",\"tempSyncDeltaValid\":";
+  json += s.tempSyncDeltaValid ? "true" : "false";
+  json += ",\"tempSyncDeltaC\":";
+  if (s.tempSyncDeltaValid) json += String(s.tempSyncDeltaC, 2);
+  else json += "null";
+  json += ",\"tempSyncAverageValid\":";
+  json += s.tempSyncAverageValid ? "true" : "false";
+  json += ",\"tempSyncAverageC\":";
+  if (s.tempSyncAverageValid) json += String(s.tempSyncAverageC, 2);
+  else json += "null";
+  json += ",\"tempSyncSamples\":";
+  json += String(s.tempSyncSamples);
+  json += ",\"tempSyncReady\":";
+  json += s.tempSyncReady ? "true" : "false";
+  json += ",\"tempSyncNewOffsetValid\":";
+  json += s.tempSyncNewOffsetValid ? "true" : "false";
+  json += ",\"tempSyncNewOffsetC\":";
+  if (s.tempSyncNewOffsetValid) json += String(s.tempSyncNewOffsetC, 2);
+  else json += "null";
 
   json += ",\"lastNanoLine\":\"";
   json += jsonEscape(_nano.lastLine());
