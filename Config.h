@@ -28,22 +28,12 @@ constexpr unsigned long NANO_LINK_TIMEOUT_MS = 5000UL;
 constexpr size_t NANO_LINE_BUFFER_SIZE = 192;
 
 // --------------------------- Wi-Fi ----------------------------
-// The ESP8266 ALWAYS starts its own hotspot. It can ALSO connect to a router
-// at the same time using WIFI_AP_STA mode.
-constexpr bool ENABLE_ROUTER_CONNECTION = true;
-
-// Put your router details here. Leave ROUTER_SSID empty to run hotspot-only.
-constexpr char ROUTER_SSID[] = "";
-constexpr char ROUTER_PASSWORD[] = "";
-
-// Hotspot remains available even while connected to the router.
+// Hotspot only. The ESP8266 does NOT connect to any router.
 constexpr char HOTSPOT_SSID[] = "NanoCharger";
-// Must be at least 8 characters for a protected ESP8266 soft-AP.
-// Change this before permanent use.
-constexpr char HOTSPOT_PASSWORD[] = "charger123";
 
-constexpr char WIFI_HOSTNAME[] = "nanocharger";
-constexpr unsigned long ROUTER_RETRY_MS = 10000UL;
+// Must be at least 8 characters for a protected ESP8266 soft-AP.
+// Change this before permanent use if you want a different password.
+constexpr char HOTSPOT_PASSWORD[] = "charger123";
 
 // ------------------------- Web server -------------------------
 constexpr uint16_t WEB_SERVER_PORT = 80;
