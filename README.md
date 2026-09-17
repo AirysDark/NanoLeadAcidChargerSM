@@ -16,7 +16,26 @@ Default hotspot:
 
 Connect your phone, tablet, or computer directly to the `NanoCharger` Wi-Fi network, then open `192.168.4.1` in a browser.
 
-The web page updates live with `/api/status`; the whole page does not need to reload.
+## Temperature sync calibration
+
+Put the external temperature sensor beside the Nano inside the charger enclosure, then press `START TEMP SYNC` on the web page.
+
+The Nano runs the calibration automatically:
+
+1. It temporarily inhibits charging and collects 60 paired external/Nano temperature samples.
+2. When the baseline is complete it returns the charger to AUTO and the web page asks you to connect/use a battery that needs charging.
+3. It waits until the Nano actually reports `CHARGER=ON` and `STATE=CHARGING`.
+4. It collects another 60 paired samples while the charger is really charging. If charging stops, sampling pauses until charging resumes.
+5. The test stops automatically after both stages are complete.
+6. The web page displays the exact line to put into `NanoLeadAcidCharger/PinsAndConfig.h`, for example:
+
+```cpp
+constexpr float INTERNAL_TEMP_CALIBRATION_OFFSET_C = -4.25f;
+```
+
+Reflash the Nano after changing that value, then move the external temperature sensor back to the battery.
+
+The test never forces the charger ON. Existing Nano voltage and temperature safety logic remains in control.
 
 ## Nano UART wiring
 
@@ -52,27 +71,20 @@ GND = common ground
 VBUS = optional / leave disconnected if the ESP has its own power source
 ```
 
-This is **not USB signalling**. Label the ports `UART LINK - NOT USB` and do not plug the custom data wiring into a normal PC/phone USB port.
+This is not USB signalling. Label the ports `UART LINK - NOT USB` and do not plug the custom data wiring into a normal PC/phone USB port.
 
 ## Web controls
 
-The dashboard exposes:
+The dashboard exposes live battery voltage, external temperature, Nano temperature, charger state, temperature-sync progress, Nano UART state, hotspot address, and the last raw Nano line.
 
-- live battery voltage
-- battery temperature
-- Nano/charger internal temperature
-- charger ON/OFF state
-- charger state and AUTO/STOP mode
-- Nano UART connection status
-- hotspot IP address
-- last raw line received from the Nano
+Main controls:
 
-Buttons:
+- `START TEMP SYNC` starts the automatic 60 OFF + 60 CHARGING calibration.
+- `CANCEL TEMP SYNC` cancels a running calibration.
+- `STOP CHARGING` sends `STOP`.
+- `AUTO` returns control to the Nano's automatic charger logic.
 
-- `STOP CHARGING` sends `STOP`
-- `AUTO` returns control to the Nano's automatic charger logic
-
-There is intentionally no remote force-ON command, so the ESP8266 cannot bypass the Nano's voltage or temperature safety logic.
+There is intentionally no remote force-ON command.
 
 ## Nano commands used
 
@@ -82,6 +94,9 @@ STATUS
 BATTERY
 TEMP
 STATE
+TSYNC START
+TSYNC STATUS
+TSYNC STOP
 STOP
 AUTO
 HELP
@@ -90,7 +105,7 @@ HELP
 ## Files
 
 - `NanoLeadAcidChargerSM.ino` - main sketch
-- `Config.h` - pins, hotspot and timing; normally the only file to edit
+- `Config.h` - pins, hotspot and timing
 - `NanoLink.h/.cpp` - Nano UART link and STATUS parser
 - `NetworkManager.h/.cpp` - hotspot-only Wi-Fi
 - `WebUi.h/.cpp` - live web page and JSON API
