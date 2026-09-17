@@ -21,7 +21,7 @@ h1{font-size:1.45rem;margin:0 0 4px}.sub{color:#9aa7b2;margin-bottom:18px}
 .label{font-size:.78rem;color:#97a6b2;text-transform:uppercase;letter-spacing:.06em}.value{font-size:1.55rem;font-weight:700;margin-top:5px;word-break:break-word}.small{font-size:1rem}
 .ok{color:#71dc8c}.bad{color:#ff7878}.warn{color:#ffd36a}
 button{border:0;border-radius:10px;padding:12px 18px;margin:4px;font-size:1rem;font-weight:700;cursor:pointer}button:disabled{opacity:.45;cursor:default}
-#auto,#syncStart,#vcalStart,#vcalSubmit{background:#4fc36a;color:#07120a}#stop,#syncStop,#vcalStop{background:#e05252;color:white}#refresh{background:#39434d;color:white}
+#auto,#syncStart,#vcalStart,#vcalSubmit{background:#4fc36a;color:#07120a}#stop,#syncStop,#vcalStop{background:#e05252;color:white}#refresh,#firmware{background:#39434d;color:white}
 input{box-sizing:border-box;width:180px;max-width:100%;border:1px solid #46515d;border-radius:9px;background:#0f1419;color:#fff;padding:11px;font-size:1rem;margin:4px}
 .foot{color:#87939e;font-size:.8rem;margin-top:10px}.row{margin-top:7px;font-size:.95rem}.row b{color:#eef2f5}
 .instruction{margin-top:10px;padding:10px;border-radius:8px;background:#11161b;line-height:1.4}
@@ -71,7 +71,7 @@ pre{white-space:pre-wrap;word-break:break-word;margin:0;color:#aeb9c2}@media(max
 
   <div class="card wide"><div class="label">Nano UART</div><div id="link" class="value small">--</div><div id="age" class="foot"></div></div>
   <div class="card wide"><div class="label">Network</div><div class="value small ok">HOTSPOT</div><div id="ips" class="foot"></div></div>
-  <div class="card wide"><div class="label">Controls</div><button id="auto" onclick="cmd('AUTO')">AUTO</button><button id="stop" onclick="cmd('STOP')">STOP CHARGING</button><button id="refresh" onclick="refreshNow()">REFRESH</button><div id="cmdResult" class="foot"></div></div>
+  <div class="card wide"><div class="label">Controls</div><button id="auto" onclick="cmd('AUTO')">AUTO</button><button id="stop" onclick="cmd('STOP')">STOP CHARGING</button><button id="refresh" onclick="refreshNow()">REFRESH</button><button id="firmware" onclick="location.href='/firmware'">FIRMWARE UPDATE</button><div id="cmdResult" class="foot"></div></div>
   <div class="card wide"><div class="label">Last Nano line</div><pre id="raw">--</pre></div>
 </div>
 <div class="foot">Connect directly to the ESP8266 hotspot and open 192.168.4.1.</div>
@@ -172,18 +172,25 @@ refreshNow();setInterval(refreshNow,intervalMs);
 }
 
 WebUi::WebUi(NanoLink& nanoLink, NetworkManager& network)
-  : _nano(nanoLink), _network(network), _server(WEB_SERVER_PORT) {}
+  : _nano(nanoLink),
+    _network(network),
+    _server(WEB_SERVER_PORT),
+    _firmwareUpdate(nanoLink) {}
 
 void WebUi::begin() {
   _server.on("/", HTTP_GET, [this]() { handleRoot(); });
   _server.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
   _server.on("/api/command", HTTP_POST, [this]() { handleCommand(); });
+  _firmwareUpdate.begin(_server);
   _server.onNotFound([this]() { handleNotFound(); });
   _server.begin();
   if (ENABLE_DEBUG) Serial.println(F("Web server started"));
 }
 
-void WebUi::update() { _server.handleClient(); }
+void WebUi::update() {
+  _server.handleClient();
+  _firmwareUpdate.update();
+}
 
 void WebUi::handleRoot() {
   String page = FPSTR(PAGE_HTML);
