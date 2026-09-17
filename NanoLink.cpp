@@ -119,52 +119,54 @@ void NanoLink::parseStatus(const String& line) {
   const String state = valueForKey(line, "STATE");
   const String mode = valueForKey(line, "MODE");
 
-  if (bat.length() == 0 || charger.length() == 0 || state.length() == 0) {
-    return;
-  }
+  if (bat.length() == 0 || charger.length() == 0 || state.length() == 0) return;
 
   _status.batteryVolts = bat.toFloat();
 
   _status.batteryTempValid = (btemp.length() > 0 && btemp != "INVALID");
-  if (_status.batteryTempValid) {
-    _status.batteryTempC = btemp.toFloat();
-  }
+  if (_status.batteryTempValid) _status.batteryTempC = btemp.toFloat();
 
   _status.nanoTempValid = (ntemp.length() > 0 && ntemp != "INVALID");
-  if (_status.nanoTempValid) {
-    _status.nanoTempC = ntemp.toFloat();
-  }
+  if (_status.nanoTempValid) _status.nanoTempC = ntemp.toFloat();
 
   _status.chargerOn = (charger == "ON");
   _status.state = state;
   _status.mode = mode.length() ? mode : "UNKNOWN";
 
   const String tsync = valueForKey(line, "TSYNC");
+  const String tphase = valueForKey(line, "TPHASE");
   const String tdelta = valueForKey(line, "TDELTA");
-  const String tavg = valueForKey(line, "TAVG");
-  const String tsamples = valueForKey(line, "TSAMPLES");
+  const String tbase = valueForKey(line, "TBASE");
+  const String tbsamp = valueForKey(line, "TBSAMP");
+  const String tchg = valueForKey(line, "TCHG");
+  const String tcsamp = valueForKey(line, "TCSAMP");
+  const String tfinal = valueForKey(line, "TFINAL");
   const String tready = valueForKey(line, "TREADY");
   const String tnew = valueForKey(line, "TNEW");
 
   _status.tempSyncActive = (tsync == "ON");
+  _status.tempSyncPhase = tphase.length() ? tphase : "OFF";
 
   _status.tempSyncDeltaValid = (tdelta.length() > 0 && tdelta != "INVALID");
-  if (_status.tempSyncDeltaValid) {
-    _status.tempSyncDeltaC = tdelta.toFloat();
-  }
+  if (_status.tempSyncDeltaValid) _status.tempSyncDeltaC = tdelta.toFloat();
 
-  _status.tempSyncAverageValid = (tavg.length() > 0 && tavg != "INVALID");
-  if (_status.tempSyncAverageValid) {
-    _status.tempSyncAverageC = tavg.toFloat();
-  }
+  _status.tempSyncBaselineValid = (tbase.length() > 0 && tbase != "INVALID");
+  if (_status.tempSyncBaselineValid) _status.tempSyncBaselineC = tbase.toFloat();
+  _status.tempSyncBaselineSamples =
+      tbsamp.length() ? static_cast<uint16_t>(tbsamp.toInt()) : 0U;
 
-  _status.tempSyncSamples = tsamples.length() ? static_cast<uint32_t>(tsamples.toInt()) : 0U;
+  _status.tempSyncChargeValid = (tchg.length() > 0 && tchg != "INVALID");
+  if (_status.tempSyncChargeValid) _status.tempSyncChargeC = tchg.toFloat();
+  _status.tempSyncChargeSamples =
+      tcsamp.length() ? static_cast<uint16_t>(tcsamp.toInt()) : 0U;
+
+  _status.tempSyncFinalValid = (tfinal.length() > 0 && tfinal != "INVALID");
+  if (_status.tempSyncFinalValid) _status.tempSyncFinalC = tfinal.toFloat();
+
   _status.tempSyncReady = (tready == "YES");
 
   _status.tempSyncNewOffsetValid = (tnew.length() > 0 && tnew != "INVALID");
-  if (_status.tempSyncNewOffsetValid) {
-    _status.tempSyncNewOffsetC = tnew.toFloat();
-  }
+  if (_status.tempSyncNewOffsetValid) _status.tempSyncNewOffsetC = tnew.toFloat();
 
   _status.receivedAtMs = millis();
   _status.valid = true;
