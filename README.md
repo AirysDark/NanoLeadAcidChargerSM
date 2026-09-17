@@ -4,6 +4,10 @@ ESP8266 hotspot serial monitor and calibration dashboard for `AirysDark/NanoLead
 
 The ESP8266 talks to the Arduino Nano over a dedicated 9600-baud UART link, polls `STATUS` once per second, and serves a live browser dashboard.
 
+## ArduinoDroid compatibility
+
+This project intentionally uses `ChargerMonitorConfig.h` instead of a generic `Config.h` filename. ArduinoDroid can put installed library folders ahead of the sketch folder in its include search path. A generic `Config.h` can therefore resolve to an unrelated library such as NV3047 and fail with errors such as `driver/gpio.h: No such file or directory` when compiling for ESP8266.
+
 ## Wi-Fi
 
 The ESP8266 runs as its own hotspot only. It does not connect to a router.
@@ -84,28 +88,9 @@ Voltage calibration never forces charging ON or bypasses charger safety logic.
 
 ## Dashboard
 
-The live page shows:
+The live page shows battery voltage, external battery/reference temperature, Nano/internal temperature, charger ON/OFF state, charger control state and mode, three-point temperature-calibration progress/result, three-point voltage-calibration progress/result, Nano UART link state, hotspot address, and the last raw Nano response.
 
-- battery voltage
-- external battery/reference temperature
-- Nano/internal temperature
-- charger ON/OFF state
-- charger control state and mode
-- three-point temperature-calibration progress and result
-- three-point voltage-calibration progress and result
-- Nano UART link state
-- hotspot address
-- last raw Nano response
-
-Main controls:
-
-- `START TEMP SYNC`
-- `CANCEL TEMP SYNC`
-- `START VOLTAGE CAL`
-- `CANCEL VOLTAGE CAL`
-- `STOP CHARGING`
-- `AUTO`
-- `REFRESH`
+Main controls are `START TEMP SYNC`, `CANCEL TEMP SYNC`, `START VOLTAGE CAL`, `CANCEL VOLTAGE CAL`, `STOP CHARGING`, `AUTO`, and `REFRESH`.
 
 The page refreshes live data without reloading the whole page.
 
@@ -134,7 +119,7 @@ There is deliberately no remote force-ON command.
 ## Files
 
 - `NanoLeadAcidChargerSM.ino` - main sketch
-- `Config.h` - UART, hotspot and web timing configuration
+- `ChargerMonitorConfig.h` - UART, hotspot and web timing configuration; unique name avoids ArduinoDroid library collisions
 - `NanoLink.h/.cpp` - Nano UART link and telemetry parser
 - `NetworkManager.h/.cpp` - hotspot-only Wi-Fi
 - `WebUi.h/.cpp` - live dashboard, calibration controls and JSON API
