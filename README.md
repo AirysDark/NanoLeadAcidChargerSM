@@ -1,6 +1,6 @@
 # NanoLeadAcidChargerSM
 
-ESP8266 hotspot serial monitor and calibration dashboard for `AirysDark/NanoLeadAcidCharger`.
+ESP8266 hotspot serial monitor, calibration dashboard, and browser firmware updater for `AirysDark/NanoLeadAcidCharger`.
 
 The ESP8266 talks to the Arduino Nano over a dedicated 9600-baud UART link, polls `STATUS` once per second, and serves a live browser dashboard.
 
@@ -18,10 +18,10 @@ The ESP8266 runs as its own hotspot only. It does not connect to a router.
 
 Connect a phone, tablet or computer directly to `NanoCharger`, then open `192.168.4.1`.
 
-## UART wiring
+## Normal charger UART wiring
 
 ```text
-Nano D9 TX ---- 5V-to-3.3V divider ---- ESP GPIO14/D5 RX
+Nano D7 TX ---- 5V-to-3.3V divider ---- ESP GPIO14/D5 RX
 Nano D8 RX <---------------------------- ESP GPIO12/D6 TX
 Nano GND ------------------------------- ESP GND
 ```
@@ -29,13 +29,47 @@ Nano GND ------------------------------- ESP GND
 For the custom USB-C UART cable:
 
 ```text
-D+  = Nano TX -> divider -> ESP RX
-D-  = ESP TX -> Nano RX
+D+  = Nano D7 TX -> divider -> ESP RX
+D-  = ESP TX -> Nano D8 RX
 GND = common ground
 VBUS = optional / leave unused when the ESP has separate power
 ```
 
 This is custom UART signalling, not normal USB signalling.
+
+## Browser firmware updates
+
+The main dashboard now has a `FIRMWARE UPDATE` button. It opens `/firmware` and accepts `.bin` files for both devices.
+
+### ESP8266 update
+
+Upload `NanoLeadAcidChargerSM.bin`. The ESP8266 uses its OTA flash area, writes the new image, and restarts automatically. No extra programming wiring is required.
+
+The GitHub Actions workflow in `.github/workflows/build-firmware.yml` builds this file automatically and publishes it as the `NanoLeadAcidChargerSM-firmware` artifact.
+
+### Arduino Nano update
+
+Upload `NanoLeadAcidCharger.bin`. Before programming, the ESP8266 sends `STOP` over the normal charger UART. It then resets the Nano into its standard Arduino bootloader, writes the application in 128-byte pages, verifies every page, and restarts the Nano.
+
+The normal D7/D8 charger UART remains connected. Nano firmware flashing needs three extra programming connections:
+
+```text
+ESP GPIO5 / D1 TX  -> Nano D0 / RX directly
+Nano D1 / TX -> 5V-to-3.3V divider -> ESP GPIO4 / D2 RX
+ESP GPIO13 / D7 -> 1k -> logic N-MOSFET gate
+MOSFET source -> GND
+MOSFET drain  -> Nano RESET
+MOSFET gate   -> 10k -> GND
+ESP GND <-> Nano GND
+```
+
+The reset MOSFET is important: the Nano RESET line is pulled up to 5 V, so it must not be connected directly to an ESP8266 GPIO. The ESP only drives the MOSFET gate.
+
+The updater automatically tries classic Nano bootloader speed `57600` and Optiboot/new Nano speed `115200`. Maximum accepted Nano application binary size is 30720 bytes.
+
+`AirysDark/NanoLeadAcidCharger` now has its own GitHub Actions workflow that builds `NanoLeadAcidCharger.bin` specifically for this web updater.
+
+The ESP8266 filesystem must have space enabled in the selected flash layout because the Nano `.bin` is temporarily stored in LittleFS before programming.
 
 ## Internal temperature calibration
 
@@ -90,7 +124,7 @@ Voltage calibration never forces charging ON or bypasses charger safety logic.
 
 The live page shows battery voltage, external battery/reference temperature, Nano/internal temperature, charger ON/OFF state, charger control state and mode, three-point temperature-calibration progress/result, three-point voltage-calibration progress/result, Nano UART link state, hotspot address, and the last raw Nano response.
 
-Main controls are `START TEMP SYNC`, `CANCEL TEMP SYNC`, `START VOLTAGE CAL`, `CANCEL VOLTAGE CAL`, `STOP CHARGING`, `AUTO`, and `REFRESH`.
+Main controls are `START TEMP SYNC`, `CANCEL TEMP SYNC`, `START VOLTAGE CAL`, `CANCEL VOLTAGE CAL`, `STOP CHARGING`, `AUTO`, `REFRESH`, and `FIRMWARE UPDATE`.
 
 The page refreshes live data without reloading the whole page.
 
@@ -119,8 +153,10 @@ There is deliberately no remote force-ON command.
 ## Files
 
 - `NanoLeadAcidChargerSM.ino` - main sketch
-- `ChargerMonitorConfig.h` - UART, hotspot and web timing configuration; unique name avoids ArduinoDroid library collisions
-- `NanoLink.h/.cpp` - Nano UART link and telemetry parser
+- `ChargerMonitorConfig.h` - UART, updater pins, hotspot and web configuration
+- `NanoLink.h/.cpp` - normal Nano UART link and telemetry parser
+- `NanoFirmwareUpdater.h/.cpp` - Nano bootloader `.bin` storage/program/verify logic
+- `FirmwareUpdate.h/.cpp` - `/firmware` page, ESP8266 OTA upload and Nano upload handling
 - `NetworkManager.h/.cpp` - hotspot-only Wi-Fi
 - `WebUi.h/.cpp` - live dashboard, calibration controls and JSON API
 - `Debug.h/.cpp` - USB Serial debugging
