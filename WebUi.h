@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
+#include "FirmwareUpdate.h"
 
 class NanoLink;
 class NetworkManager;
@@ -16,6 +17,7 @@ private:
   NanoLink& _nano;
   NetworkManager& _network;
   ESP8266WebServer _server;
+  FirmwareUpdate _firmwareUpdate;
 
   void handleRoot();
   void handleStatus();
