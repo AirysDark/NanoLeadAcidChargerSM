@@ -1,0 +1,44 @@
+name: Build ESP8266 firmware
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install ESP8266 core
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://arduino.esp8266.com/stable/package_esp8266com_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp8266:esp8266
+
+      - name: Compile ESP8266 firmware
+        run: |
+          mkdir -p build
+          arduino-cli compile \
+            --fqbn esp8266:esp8266:nodemcuv2 \
+            --output-dir build \
+            .
+
+      - name: Name web-update binary
+        run: |
+          BIN="$(find build -maxdepth 1 -type f -name '*.bin' | head -n 1)"
+          test -n "$BIN"
+          cp "$BIN" build/NanoLeadAcidChargerSM.bin
+          ls -lh build/NanoLeadAcidChargerSM.bin
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NanoLeadAcidChargerSM-firmware
+          path: build/NanoLeadAcidChargerSM.bin
