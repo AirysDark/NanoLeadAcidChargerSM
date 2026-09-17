@@ -1,5 +1,6 @@
 #include "NanoLink.h"
 #include "Debug.h"
+#include <climits>
 
 NanoLink::NanoLink()
   : _serial(PIN_NANO_RX, PIN_NANO_TX),
@@ -137,6 +138,34 @@ void NanoLink::parseStatus(const String& line) {
   _status.chargerOn = (charger == "ON");
   _status.state = state;
   _status.mode = mode.length() ? mode : "UNKNOWN";
+
+  const String tsync = valueForKey(line, "TSYNC");
+  const String tdelta = valueForKey(line, "TDELTA");
+  const String tavg = valueForKey(line, "TAVG");
+  const String tsamples = valueForKey(line, "TSAMPLES");
+  const String tready = valueForKey(line, "TREADY");
+  const String tnew = valueForKey(line, "TNEW");
+
+  _status.tempSyncActive = (tsync == "ON");
+
+  _status.tempSyncDeltaValid = (tdelta.length() > 0 && tdelta != "INVALID");
+  if (_status.tempSyncDeltaValid) {
+    _status.tempSyncDeltaC = tdelta.toFloat();
+  }
+
+  _status.tempSyncAverageValid = (tavg.length() > 0 && tavg != "INVALID");
+  if (_status.tempSyncAverageValid) {
+    _status.tempSyncAverageC = tavg.toFloat();
+  }
+
+  _status.tempSyncSamples = tsamples.length() ? static_cast<uint32_t>(tsamples.toInt()) : 0U;
+  _status.tempSyncReady = (tready == "YES");
+
+  _status.tempSyncNewOffsetValid = (tnew.length() > 0 && tnew != "INVALID");
+  if (_status.tempSyncNewOffsetValid) {
+    _status.tempSyncNewOffsetC = tnew.toFloat();
+  }
+
   _status.receivedAtMs = millis();
   _status.valid = true;
 }
