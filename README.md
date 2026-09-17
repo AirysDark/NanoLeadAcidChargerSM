@@ -4,53 +4,46 @@ ESP8266 Wi-Fi serial monitor/web interface for `AirysDark/NanoLeadAcidCharger`.
 
 The ESP8266 talks to the Arduino Nano over a dedicated 9600-baud UART link, polls `STATUS` once per second, and serves a live browser dashboard.
 
-## Wi-Fi operation
+## Wi-Fi
 
-The ESP8266 runs as its own Wi-Fi hotspot only. It does not connect to a router.
-
-Default hotspot:
+The ESP8266 runs as its own hotspot only. It does not connect to a router.
 
 - SSID: `NanoCharger`
-- Password: `charger123` — change this in `Config.h`
+- Password: `charger123`
 - Address: `http://192.168.4.1/`
-
-Connect your phone, tablet, or computer directly to the `NanoCharger` Wi-Fi network, then open `192.168.4.1` in a browser.
 
 ## Temperature sync calibration
 
-Put the external temperature sensor beside the Nano inside the charger enclosure, then press `START TEMP SYNC` on the web page.
+Put the external temperature sensor beside the Nano inside the charger enclosure, then press `START TEMP SYNC`.
 
-The Nano runs the calibration automatically:
+1. The Nano holds charging OFF and collects 60 paired temperature samples.
+2. It returns to AUTO and waits until it actually reports `CHARGER=ON` and `STATE=CHARGING`.
+3. It collects another 60 paired samples while charging.
+4. The test completes automatically and shows the exact `INTERNAL_TEMP_CALIBRATION_OFFSET_C` line to copy into `NanoLeadAcidCharger/PinsAndConfig.h` before reflashing.
 
-1. It temporarily inhibits charging and collects 60 paired external/Nano temperature samples.
-2. When the baseline is complete it returns the charger to AUTO and the web page asks you to connect/use a battery that needs charging.
-3. It waits until the Nano actually reports `CHARGER=ON` and `STATE=CHARGING`.
-4. It collects another 60 paired samples while the charger is really charging. If charging stops, sampling pauses until charging resumes.
-5. The test stops automatically after both stages are complete.
-6. The web page displays the exact line to put into `NanoLeadAcidCharger/PinsAndConfig.h`, for example:
+The test never forces the charger ON.
+
+## Battery voltage divider calibration
+
+Press `START VOLTAGE CAL` and use a multimeter directly across the battery terminals.
+
+1. The page asks for reading 1. Enter the actual multimeter voltage, for example `12.07`.
+2. The Nano saves its own divider reading at that exact moment.
+3. It waits until its measured battery voltage rises by at least the configured step, then asks for reading 2.
+4. Enter the second multimeter voltage.
+5. It waits for another voltage rise and then asks for reading 3.
+6. After reading 3 it performs a three-point linear calibration and automatically shows the exact two lines to replace in `NanoLeadAcidCharger/PinsAndConfig.h`:
 
 ```cpp
-constexpr float INTERNAL_TEMP_CALIBRATION_OFFSET_C = -4.25f;
+constexpr float BATTERY_VOLTAGE_CALIBRATION = 1.000000f;
+constexpr float BATTERY_VOLTAGE_OFFSET_VOLTS = 0.0000f;
 ```
 
-Reflash the Nano after changing that value, then move the external temperature sensor back to the battery.
+The numbers shown by the webpage will be the measured result, not the example values above. Reflash the Nano after replacing both values, then verify the Nano voltage against the multimeter.
 
-The test never forces the charger ON. Existing Nano voltage and temperature safety logic remains in control.
+The voltage calibration does not force charging ON or bypass any charger safety logic.
 
-## Nano UART wiring
-
-Nano firmware defaults:
-
-- Nano D8 = RX from ESP8266
-- Nano D9 = TX to ESP8266
-- 9600 baud
-
-ESP8266 firmware defaults:
-
-- GPIO14 / D5 = RX from Nano
-- GPIO12 / D6 = TX to Nano
-
-Wire:
+## UART wiring
 
 ```text
 Nano D9 TX ---- 5V-to-3.3V divider ---- ESP GPIO14/D5 RX
@@ -58,35 +51,18 @@ Nano D8 RX <---------------------------- ESP GPIO12/D6 TX
 Nano GND ------------------------------- ESP GND
 ```
 
-Nano TX is 5V logic. Do not connect Nano TX directly to ESP8266 RX. The ESP8266 TX is 3.3V and can normally drive the Nano RX directly.
-
-## Custom USB-C UART cable
-
-If two USB-C breakout boards are being used only as a convenient cable connector:
+For the custom USB-C UART cable:
 
 ```text
 D+  = Nano TX -> divider -> ESP RX
 D-  = ESP TX -> Nano RX
 GND = common ground
-VBUS = optional / leave disconnected if the ESP has its own power source
+VBUS = optional / unused if ESP has its own power source
 ```
 
-This is not USB signalling. Label the ports `UART LINK - NOT USB` and do not plug the custom data wiring into a normal PC/phone USB port.
+This is not normal USB signalling.
 
-## Web controls
-
-The dashboard exposes live battery voltage, external temperature, Nano temperature, charger state, temperature-sync progress, Nano UART state, hotspot address, and the last raw Nano line.
-
-Main controls:
-
-- `START TEMP SYNC` starts the automatic 60 OFF + 60 CHARGING calibration.
-- `CANCEL TEMP SYNC` cancels a running calibration.
-- `STOP CHARGING` sends `STOP`.
-- `AUTO` returns control to the Nano's automatic charger logic.
-
-There is intentionally no remote force-ON command.
-
-## Nano commands used
+## Nano commands
 
 ```text
 PING
@@ -97,6 +73,10 @@ STATE
 TSYNC START
 TSYNC STATUS
 TSYNC STOP
+VCAL START
+VCAL SAMPLE 12.07
+VCAL STATUS
+VCAL STOP
 STOP
 AUTO
 HELP
@@ -106,7 +86,7 @@ HELP
 
 - `NanoLeadAcidChargerSM.ino` - main sketch
 - `Config.h` - pins, hotspot and timing
-- `NanoLink.h/.cpp` - Nano UART link and STATUS parser
+- `NanoLink.h/.cpp` - Nano UART link and telemetry parser
 - `NetworkManager.h/.cpp` - hotspot-only Wi-Fi
-- `WebUi.h/.cpp` - live web page and JSON API
+- `WebUi.h/.cpp` - dashboard, calibration controls and JSON API
 - `Debug.h/.cpp` - USB Serial debugging
