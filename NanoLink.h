@@ -55,6 +55,14 @@ public:
   void begin();
   void update();
   void sendCommand(const String& command);
+
+  // The firmware updater temporarily takes over a second SoftwareSerial UART
+  // connected to Nano D0/D1. Pausing stops normal STATUS polling and releases
+  // the active SoftwareSerial listener until resume() restores it.
+  void pause();
+  void resume();
+  bool paused() const;
+
   bool connected() const;
   unsigned long statusAgeMs() const;
   const ChargerStatus& status() const;
@@ -65,6 +73,7 @@ private:
   char _line[NANO_LINE_BUFFER_SIZE];
   size_t _length;
   unsigned long _lastPollMs;
+  bool _paused;
   ChargerStatus _status;
   String _lastLine;
 
