@@ -6,12 +6,7 @@ The ESP8266 talks to the Arduino Nano over a dedicated 9600-baud UART link, poll
 
 ## Wi-Fi operation
 
-The ESP8266 runs in `WIFI_AP_STA` mode:
-
-- Its own hotspot is **always available**.
-- It can simultaneously connect to your normal router.
-- If the router disappears, the hotspot still works.
-- The web page updates live with `/api/status`; the whole page does not need to reload.
+The ESP8266 runs as its own Wi-Fi hotspot only. It does not connect to a router.
 
 Default hotspot:
 
@@ -19,14 +14,9 @@ Default hotspot:
 - Password: `charger123` — change this in `Config.h`
 - Address: `http://192.168.4.1/`
 
-To also use your router, edit only `Config.h` and set:
+Connect your phone, tablet, or computer directly to the `NanoCharger` Wi-Fi network, then open `192.168.4.1` in a browser.
 
-```cpp
-constexpr char ROUTER_SSID[] = "YOUR_ROUTER_NAME";
-constexpr char ROUTER_PASSWORD[] = "YOUR_ROUTER_PASSWORD";
-```
-
-When connected to the router, the ESP prints its router IP to the USB Serial Monitor. It also attempts to advertise `http://nanocharger.local/` using mDNS.
+The web page updates live with `/api/status`; the whole page does not need to reload.
 
 ## Nano UART wiring
 
@@ -74,7 +64,7 @@ The dashboard exposes:
 - charger ON/OFF state
 - charger state and AUTO/STOP mode
 - Nano UART connection status
-- hotspot and router connection status
+- hotspot IP address
 - last raw line received from the Nano
 
 Buttons:
@@ -100,8 +90,8 @@ HELP
 ## Files
 
 - `NanoLeadAcidChargerSM.ino` - main sketch
-- `Config.h` - pins, Wi-Fi and timing; normally the only file to edit
+- `Config.h` - pins, hotspot and timing; normally the only file to edit
 - `NanoLink.h/.cpp` - Nano UART link and STATUS parser
-- `NetworkManager.h/.cpp` - hotspot + router Wi-Fi
+- `NetworkManager.h/.cpp` - hotspot-only Wi-Fi
 - `WebUi.h/.cpp` - live web page and JSON API
 - `Debug.h/.cpp` - USB Serial debugging
