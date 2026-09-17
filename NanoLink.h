@@ -10,6 +10,7 @@ struct ChargerStatus {
   float batteryTempC = 0.0f;
   bool nanoTempValid = false;
   float nanoTempC = 0.0f;
+  uint16_t nanoTempRawAdc = 0;
   bool chargerOn = false;
   String state = "UNKNOWN";
   String mode = "UNKNOWN";
