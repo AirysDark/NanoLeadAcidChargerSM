@@ -133,6 +133,7 @@ void NanoLink::parseStatus(const String& line) {
   _status.state = state;
   _status.mode = mode.length() ? mode : "UNKNOWN";
 
+  // Temperature sync.
   const String tsync = valueForKey(line, "TSYNC");
   const String tphase = valueForKey(line, "TPHASE");
   const String tdelta = valueForKey(line, "TDELTA");
@@ -146,27 +147,39 @@ void NanoLink::parseStatus(const String& line) {
 
   _status.tempSyncActive = (tsync == "ON");
   _status.tempSyncPhase = tphase.length() ? tphase : "OFF";
-
   _status.tempSyncDeltaValid = (tdelta.length() > 0 && tdelta != "INVALID");
   if (_status.tempSyncDeltaValid) _status.tempSyncDeltaC = tdelta.toFloat();
-
   _status.tempSyncBaselineValid = (tbase.length() > 0 && tbase != "INVALID");
   if (_status.tempSyncBaselineValid) _status.tempSyncBaselineC = tbase.toFloat();
-  _status.tempSyncBaselineSamples =
-      tbsamp.length() ? static_cast<uint16_t>(tbsamp.toInt()) : 0U;
-
+  _status.tempSyncBaselineSamples = tbsamp.length() ? static_cast<uint16_t>(tbsamp.toInt()) : 0U;
   _status.tempSyncChargeValid = (tchg.length() > 0 && tchg != "INVALID");
   if (_status.tempSyncChargeValid) _status.tempSyncChargeC = tchg.toFloat();
-  _status.tempSyncChargeSamples =
-      tcsamp.length() ? static_cast<uint16_t>(tcsamp.toInt()) : 0U;
-
+  _status.tempSyncChargeSamples = tcsamp.length() ? static_cast<uint16_t>(tcsamp.toInt()) : 0U;
   _status.tempSyncFinalValid = (tfinal.length() > 0 && tfinal != "INVALID");
   if (_status.tempSyncFinalValid) _status.tempSyncFinalC = tfinal.toFloat();
-
   _status.tempSyncReady = (tready == "YES");
-
   _status.tempSyncNewOffsetValid = (tnew.length() > 0 && tnew != "INVALID");
   if (_status.tempSyncNewOffsetValid) _status.tempSyncNewOffsetC = tnew.toFloat();
+
+  // Voltage divider calibration.
+  const String vcal = valueForKey(line, "VCAL");
+  const String vphase = valueForKey(line, "VPHASE");
+  const String vsamp = valueForKey(line, "VSAMP");
+  const String vtarget = valueForKey(line, "VTARGET");
+  const String vready = valueForKey(line, "VREADY");
+  const String vscale = valueForKey(line, "VSCALE");
+  const String voff = valueForKey(line, "VOFF");
+
+  _status.voltageCalActive = (vcal == "ON");
+  _status.voltageCalPhase = vphase.length() ? vphase : "OFF";
+  _status.voltageCalSamples = vsamp.length() ? static_cast<uint8_t>(vsamp.toInt()) : 0U;
+  _status.voltageCalTargetValid = (vtarget.length() > 0 && vtarget != "INVALID");
+  if (_status.voltageCalTargetValid) _status.voltageCalTargetV = vtarget.toFloat();
+  _status.voltageCalReady = (vready == "YES");
+  _status.voltageCalScaleValid = (vscale.length() > 0 && vscale != "INVALID");
+  if (_status.voltageCalScaleValid) _status.voltageCalScale = vscale.toFloat();
+  _status.voltageCalOffsetValid = (voff.length() > 0 && voff != "INVALID");
+  if (_status.voltageCalOffsetValid) _status.voltageCalOffsetV = voff.toFloat();
 
   _status.receivedAtMs = millis();
   _status.valid = true;
