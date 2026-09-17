@@ -14,22 +14,25 @@ struct ChargerStatus {
   String state = "UNKNOWN";
   String mode = "UNKNOWN";
 
-  // Two-stage temperature-sync telemetry.
+  // Three-point internal-temperature calibration telemetry.
   bool tempSyncActive = false;
   String tempSyncPhase = "OFF";
   bool tempSyncDeltaValid = false;
   float tempSyncDeltaC = 0.0f;
-  bool tempSyncBaselineValid = false;
-  float tempSyncBaselineC = 0.0f;
-  uint16_t tempSyncBaselineSamples = 0;
-  bool tempSyncChargeValid = false;
-  float tempSyncChargeC = 0.0f;
-  uint16_t tempSyncChargeSamples = 0;
-  bool tempSyncFinalValid = false;
-  float tempSyncFinalC = 0.0f;
+
+  bool tempPointValid[3] = {false, false, false};
+  float tempPointExternalC[3] = {0.0f, 0.0f, 0.0f};
+  bool tempPointRawValid[3] = {false, false, false};
+  float tempPointRaw[3] = {0.0f, 0.0f, 0.0f};
+  uint16_t tempPointSamples[3] = {0, 0, 0};
+
   bool tempSyncReady = false;
-  bool tempSyncNewOffsetValid = false;
-  float tempSyncNewOffsetC = 0.0f;
+  bool tempCalRawValid = false;
+  float tempCalRaw = 0.0f;
+  bool tempCalCValid = false;
+  float tempCalC = 0.0f;
+  bool tempCountsPerCValid = false;
+  float tempCountsPerC = 0.0f;
 
   // Three-point voltage-divider calibration telemetry.
   bool voltageCalActive = false;
@@ -49,14 +52,11 @@ struct ChargerStatus {
 class NanoLink {
 public:
   NanoLink();
-
   void begin();
   void update();
-
   void sendCommand(const String& command);
   bool connected() const;
   unsigned long statusAgeMs() const;
-
   const ChargerStatus& status() const;
   const String& lastLine() const;
 
