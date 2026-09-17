@@ -14,14 +14,25 @@ struct ChargerStatus {
   String state = "UNKNOWN";
   String mode = "UNKNOWN";
 
-  // Temperature-sync telemetry from the Nano.
+  // Two-stage temperature-sync telemetry from the Nano.
   bool tempSyncActive = false;
+  String tempSyncPhase = "OFF";
+
   bool tempSyncDeltaValid = false;
   float tempSyncDeltaC = 0.0f;
-  bool tempSyncAverageValid = false;
-  float tempSyncAverageC = 0.0f;
-  uint32_t tempSyncSamples = 0;
+
+  bool tempSyncBaselineValid = false;
+  float tempSyncBaselineC = 0.0f;
+  uint16_t tempSyncBaselineSamples = 0;
+
+  bool tempSyncChargeValid = false;
+  float tempSyncChargeC = 0.0f;
+  uint16_t tempSyncChargeSamples = 0;
+
+  bool tempSyncFinalValid = false;
+  float tempSyncFinalC = 0.0f;
   bool tempSyncReady = false;
+
   bool tempSyncNewOffsetValid = false;
   float tempSyncNewOffsetC = 0.0f;
 
