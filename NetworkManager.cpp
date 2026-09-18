@@ -7,7 +7,6 @@ NetworkManager::NetworkManager() {
 }
 
 void NetworkManager::begin() {
-  WiFi.persistent(false);
   WiFi.mode(WIFI_AP);
   startHotspot();
 }
