@@ -4,18 +4,18 @@
 #include "FirmwareUpdate.h"
 
 class NanoLink;
-class NetworkManager;
+class ChargerNetwork;
 
 class WebUi {
 public:
-  WebUi(NanoLink& nanoLink, NetworkManager& network);
+  WebUi(NanoLink& nanoLink, ChargerNetwork& network);
 
   void begin();
   void update();
 
 private:
   NanoLink& _nano;
-  NetworkManager& _network;
+  ChargerNetwork& _network;
   WebServer _server;
   FirmwareUpdate _firmwareUpdate;
 
