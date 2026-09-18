@@ -1,4 +1,5 @@
 #include "ChargerMonitorConfig.h"
+#include <Update.h>  // Force ArduinoDroid to compile/link ESP32 Update library
 #include "Debug.h"
 #include "NanoLink.h"
 #include "ChargerNetwork.h"
