@@ -1,7 +1,7 @@
 #include "FirmwareUpdate.h"
 #include "ChargerMonitorConfig.h"
 #include "Debug.h"
-#include <Updater.h>
+#include <Update.h>
 
 namespace {
 const char FIRMWARE_PAGE[] PROGMEM = R"HTML(
@@ -31,19 +31,19 @@ pre{background:#0a0d10;border:1px solid #343d46;border-radius:8px;padding:10px;w
 <a class="back" href="/">BACK TO CHARGER</a>
 
 <div class="card">
-  <div class="label">ESP8266 monitor firmware</div>
-  <p class="note">Upload the <b>NanoLeadAcidChargerSM .bin</b>. The ESP8266 writes the new firmware to its OTA slot and restarts automatically. No extra programming wires are needed.</p>
+  <div class="label">ESP32-WROOM monitor firmware</div>
+  <p class="note">Upload the <b>NanoLeadAcidChargerSM .bin</b>. The ESP32-WROOM writes the new firmware to its OTA slot and restarts automatically. No extra programming wires are needed.</p>
   <input id="espFile" type="file" accept=".bin,application/octet-stream">
-  <button id="espButton" onclick="uploadFirmware('esp')">FLASH ESP8266 .BIN</button>
+  <button id="espButton" onclick="uploadFirmware('esp')">FLASH ESP32-WROOM .BIN</button>
 </div>
 
 <div class="card">
   <div class="label">Arduino Nano charger firmware</div>
-  <p class="note">Upload the <b>NanoLeadAcidCharger .bin</b>. The ESP8266 first sends STOP to the charger, resets the Nano into its Arduino bootloader, writes the application, verifies every page, then restarts the Nano.</p>
+  <p class="note">Upload the <b>NanoLeadAcidCharger .bin</b>. The ESP32-WROOM first sends STOP to the charger, resets the Nano into its Arduino bootloader, writes the application, verifies every page, then restarts the Nano.</p>
   <p class="note warn">The Nano web update needs the separate bootloader programming wiring below. The normal D7/D8 charger UART stays connected.</p>
-  <pre>ESP GPIO5 / D1  TX  -> Nano D0 / RX
-Nano D1 / TX -> 5V-to-3.3V divider -> ESP GPIO4 / D2 RX
-ESP GPIO13 / D7 -> 1k -> logic N-MOSFET gate
+  <pre>ESP32 GPIO27 TX1 -> Nano D0 / RX
+Nano D1 / TX -> 5V-to-3.3V divider -> ESP32 GPIO26 RX1
+ESP32 GPIO25 -> 1k -> logic N-MOSFET gate
 MOSFET source -> GND
 MOSFET drain  -> Nano RESET
 MOSFET gate   -> 10k -> GND
@@ -69,14 +69,14 @@ async function uploadFirmware(kind){
  if(kind==='nano'&&file.size>30720){setResult('Nano .bin is too large. Maximum is 30720 bytes.','bad');return}
  if(file.size===0){setResult('Firmware file is empty.','bad');return}
  const data=new FormData();data.append('firmware',file,file.name);
- setBusy(true);setResult(kind==='esp'?'Uploading ESP8266 firmware...':'Uploading and programming Nano firmware...','warn');
+ setBusy(true);setResult(kind==='esp'?'Uploading ESP32-WROOM firmware...':'Uploading and programming Nano firmware...','warn');
  try{
   const response=await fetch('/firmware/'+kind,{method:'POST',body:data,cache:'no-store'});
   const result=await response.json();
   if(!result.ok){setResult('Update failed: '+result.message,'bad');setBusy(false);return}
   setResult(result.message,'ok');
   if(kind==='esp'){
-    setResult(result.message+' Rebooting ESP8266; reconnecting to the hotspot page in a few seconds...','ok');
+    setResult(result.message+' Rebooting ESP32-WROOM; reconnecting to the hotspot page in a few seconds...','ok');
     setTimeout(()=>{location.href='/'},6000);
   }else{
     setBusy(false);
@@ -102,7 +102,7 @@ FirmwareUpdate::FirmwareUpdate(NanoLink& nanoLink)
     _restartAtMs(0) {
 }
 
-void FirmwareUpdate::begin(ESP8266WebServer& server) {
+void FirmwareUpdate::begin(WebServer& server) {
   _server = &server;
   _nanoUpdater.begin();
 
@@ -142,13 +142,12 @@ void FirmwareUpdate::handleEspUpload() {
     String name = upload.filename;
     name.toLowerCase();
     if (!name.endsWith(".bin")) {
-      _espUploadError = F("ESP8266 firmware must be a .bin file");
+      _espUploadError = F("ESP32-WROOM firmware must be a .bin file");
       return;
     }
 
-    const size_t freeSketchSpace = (ESP.getFreeSketchSpace() - 0x1000U) & 0xFFFFF000U;
-    if (!Update.begin(freeSketchSpace)) {
-      _espUploadError = F("ESP8266 OTA partition does not have enough free space");
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+      _espUploadError = F("ESP32-WROOM OTA partition is not available or does not have enough space");
       return;
     }
 
@@ -164,7 +163,7 @@ void FirmwareUpdate::handleEspUpload() {
     if (!_espUploadOk) return;
     if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
       _espUploadOk = false;
-      _espUploadError = F("ESP8266 flash write failed");
+      _espUploadError = F("ESP32-WROOM flash write failed");
     }
     yield();
     return;
@@ -174,7 +173,7 @@ void FirmwareUpdate::handleEspUpload() {
     if (_espUploadOk) {
       if (!Update.end(true)) {
         _espUploadOk = false;
-        _espUploadError = F("ESP8266 firmware image was rejected or incomplete");
+        _espUploadError = F("ESP32-WROOM firmware image was rejected or incomplete");
       }
     } else {
       (void)Update.end(false);
@@ -184,7 +183,7 @@ void FirmwareUpdate::handleEspUpload() {
 
   if (upload.status == UPLOAD_FILE_ABORTED) {
     _espUploadOk = false;
-    _espUploadError = F("ESP8266 firmware upload was aborted");
+    _espUploadError = F("ESP32-WROOM firmware upload was aborted");
     (void)Update.end(false);
   }
 }
@@ -193,17 +192,17 @@ void FirmwareUpdate::handleEspFinished() {
   if (_server == nullptr) return;
 
   if (!_espUploadStarted) {
-    sendResult(false, F("No ESP8266 firmware file was uploaded"));
+    sendResult(false, F("No ESP32-WROOM firmware file was uploaded"));
     return;
   }
 
   if (!_espUploadOk) {
-    sendResult(false, _espUploadError.length() ? _espUploadError : String(F("ESP8266 update failed")));
+    sendResult(false, _espUploadError.length() ? _espUploadError : String(F("ESP32-WROOM update failed")));
     _espUploadStarted = false;
     return;
   }
 
-  sendResult(true, F("ESP8266 firmware written successfully."));
+  sendResult(true, F("ESP32-WROOM firmware written successfully."));
   _espUploadStarted = false;
   _restartPending = true;
   _restartAtMs = millis() + 750UL;
