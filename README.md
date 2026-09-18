@@ -1,16 +1,16 @@
 # NanoLeadAcidChargerSM
 
-ESP8266 hotspot serial monitor, calibration dashboard, and browser firmware updater for `AirysDark/NanoLeadAcidCharger`.
+ESP32-WROOM hotspot serial monitor, calibration dashboard, and browser firmware updater for `AirysDark/NanoLeadAcidCharger`.
 
-The ESP8266 talks to the Arduino Nano over a dedicated 9600-baud UART link, polls `STATUS` once per second, and serves a live browser dashboard.
+The ESP32-WROOM talks to the Arduino Nano over a dedicated 9600-baud UART link, polls `STATUS` once per second, and serves a live browser dashboard.
 
 ## ArduinoDroid compatibility
 
-This project intentionally uses `ChargerMonitorConfig.h` instead of a generic `Config.h` filename. ArduinoDroid can put installed library folders ahead of the sketch folder in its include search path. A generic `Config.h` can therefore resolve to an unrelated library such as NV3047 and fail with errors such as `driver/gpio.h: No such file or directory` when compiling for ESP8266.
+This project intentionally uses `ChargerMonitorConfig.h` instead of a generic `Config.h` filename. ArduinoDroid can put installed library folders ahead of the sketch folder in its include search path, so a generic `Config.h` can resolve to an unrelated installed library.
 
 ## Wi-Fi
 
-The ESP8266 runs as its own hotspot only. It does not connect to a router.
+The ESP32-WROOM runs as its own hotspot only. It does not connect to a router.
 
 - SSID: `NanoCharger`
 - Password: `charger123`
@@ -21,16 +21,16 @@ Connect a phone, tablet or computer directly to `NanoCharger`, then open `192.16
 ## Normal charger UART wiring
 
 ```text
-Nano D7 TX ---- 5V-to-3.3V divider ---- ESP GPIO14/D5 RX
-Nano D8 RX <---------------------------- ESP GPIO12/D6 TX
-Nano GND ------------------------------- ESP GND
+Nano D7 TX ---- 5V-to-3.3V divider ---- ESP32 GPIO16 RX2
+Nano D8 RX <---------------------------- ESP32 GPIO17 TX2
+Nano GND ------------------------------- ESP32 GND
 ```
 
 For the custom USB-C UART cable:
 
 ```text
-D+  = Nano D7 TX -> divider -> ESP RX
-D-  = ESP TX -> Nano D8 RX
+D+  = Nano D7 TX -> divider -> ESP32 GPIO16 RX2
+D-  = ESP32 GPIO17 TX2 -> Nano D8 RX
 GND = common ground
 VBUS = optional / leave unused when the ESP has separate power
 ```
@@ -41,35 +41,35 @@ This is custom UART signalling, not normal USB signalling.
 
 The main dashboard now has a `FIRMWARE UPDATE` button. It opens `/firmware` and accepts `.bin` files for both devices.
 
-### ESP8266 update
+### ESP32-WROOM update
 
-Upload `NanoLeadAcidChargerSM.bin`. The ESP8266 uses its OTA flash area, writes the new image, and restarts automatically. No extra programming wiring is required.
+Upload `NanoLeadAcidChargerSM.bin`. The ESP32-WROOM uses its OTA flash area, writes the new image, and restarts automatically. No extra programming wiring is required.
 
 The GitHub Actions workflow in `.github/workflows/build-firmware.yml` builds this file automatically and publishes it as the `NanoLeadAcidChargerSM-firmware` artifact.
 
 ### Arduino Nano update
 
-Upload `NanoLeadAcidCharger.bin`. Before programming, the ESP8266 sends `STOP` over the normal charger UART. It then resets the Nano into its standard Arduino bootloader, writes the application in 128-byte pages, verifies every page, and restarts the Nano.
+Upload `NanoLeadAcidCharger.bin`. Before programming, the ESP32-WROOM sends `STOP` over the normal charger UART. It then resets the Nano into its standard Arduino bootloader, writes the application in 128-byte pages, verifies every page, and restarts the Nano.
 
 The normal D7/D8 charger UART remains connected. Nano firmware flashing needs three extra programming connections:
 
 ```text
-ESP GPIO5 / D1 TX  -> Nano D0 / RX directly
-Nano D1 / TX -> 5V-to-3.3V divider -> ESP GPIO4 / D2 RX
-ESP GPIO13 / D7 -> 1k -> logic N-MOSFET gate
+ESP32 GPIO27 TX1 -> Nano D0 / RX directly
+Nano D1 / TX -> 5V-to-3.3V divider -> ESP32 GPIO26 RX1
+ESP32 GPIO25 -> 1k -> logic N-MOSFET gate
 MOSFET source -> GND
 MOSFET drain  -> Nano RESET
 MOSFET gate   -> 10k -> GND
 ESP GND <-> Nano GND
 ```
 
-The reset MOSFET is important: the Nano RESET line is pulled up to 5 V, so it must not be connected directly to an ESP8266 GPIO. The ESP only drives the MOSFET gate.
+The reset MOSFET is important: the Nano RESET line is pulled up to 5 V, so it must not be connected directly to an ESP32 GPIO. The ESP32 only drives the MOSFET gate.
 
 The updater automatically tries classic Nano bootloader speed `57600` and Optiboot/new Nano speed `115200`. Maximum accepted Nano application binary size is 30720 bytes.
 
 `AirysDark/NanoLeadAcidCharger` now has its own GitHub Actions workflow that builds `NanoLeadAcidCharger.bin` specifically for this web updater.
 
-The ESP8266 filesystem must have space enabled in the selected flash layout because the Nano `.bin` is temporarily stored in LittleFS before programming.
+The ESP32-WROOM uses LittleFS to temporarily store the Nano `.bin` before programming. Use an ESP32 partition layout that includes filesystem space.
 
 ## Internal temperature calibration
 
@@ -153,10 +153,28 @@ There is deliberately no remote force-ON command.
 ## Files
 
 - `NanoLeadAcidChargerSM.ino` - main sketch
-- `ChargerMonitorConfig.h` - UART, updater pins, hotspot and web configuration
+- `ChargerMonitorConfig.h` - ESP32-WROOM UART pins, updater pins, hotspot and web configuration
 - `NanoLink.h/.cpp` - normal Nano UART link and telemetry parser
 - `NanoFirmwareUpdater.h/.cpp` - Nano bootloader `.bin` storage/program/verify logic
-- `FirmwareUpdate.h/.cpp` - `/firmware` page, ESP8266 OTA upload and Nano upload handling
+- `FirmwareUpdate.h/.cpp` - `/firmware` page, ESP32-WROOM OTA upload and Nano upload handling
 - `NetworkManager.h/.cpp` - hotspot-only Wi-Fi
 - `WebUi.h/.cpp` - live dashboard, calibration controls and JSON API
 - `Debug.h/.cpp` - USB Serial debugging
+
+
+## ESP32-WROOM board selection
+
+Use **ESP32 Dev Module** for a standard ESP32-WROOM-32 development board. The GitHub Actions build uses `esp32:esp32:esp32`.
+
+The firmware uses the ESP32 hardware UARTs instead of SoftwareSerial:
+
+```text
+UART2 normal Nano link:
+GPIO16 RX2 <- Nano D7 TX through 5V-to-3.3V divider
+GPIO17 TX2 -> Nano D8 RX
+
+UART1 Nano bootloader updater:
+GPIO26 RX1 <- Nano D1 TX through 5V-to-3.3V divider
+GPIO27 TX1 -> Nano D0 RX
+GPIO25     -> 1k -> reset MOSFET gate
+```
