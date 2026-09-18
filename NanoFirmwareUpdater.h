@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <LittleFS.h>
-#include <SoftwareSerial.h>
+#include <HardwareSerial.h>
 
 class NanoLink;
 
@@ -24,7 +24,7 @@ public:
 
 private:
   NanoLink& _nano;
-  SoftwareSerial _bootSerial;
+  HardwareSerial _bootSerial;
   File _uploadFile;
 
   bool _storageReady;
