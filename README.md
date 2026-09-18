@@ -157,7 +157,7 @@ There is deliberately no remote force-ON command.
 - `NanoLink.h/.cpp` - normal Nano UART link and telemetry parser
 - `NanoFirmwareUpdater.h/.cpp` - Nano bootloader `.bin` storage/program/verify logic
 - `FirmwareUpdate.h/.cpp` - `/firmware` page, ESP32-WROOM OTA upload and Nano upload handling
-- `NetworkManager.h/.cpp` - hotspot-only Wi-Fi
+- `ChargerNetwork.h/.cpp` - hotspot-only Wi-Fi
 - `WebUi.h/.cpp` - live dashboard, calibration controls and JSON API
 - `Debug.h/.cpp` - USB Serial debugging
 
