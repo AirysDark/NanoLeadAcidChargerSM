@@ -3,7 +3,7 @@
 #include <climits>
 
 NanoLink::NanoLink()
-  : _serial(PIN_NANO_RX, PIN_NANO_TX),
+  : _serial(2),
     _length(0),
     _lastPollMs(0),
     _paused(false) {
@@ -11,8 +11,7 @@ NanoLink::NanoLink()
 }
 
 void NanoLink::begin() {
-  _serial.begin(NANO_BAUD);
-  _serial.listen();
+  _serial.begin(NANO_BAUD, SERIAL_8N1, PIN_NANO_RX, PIN_NANO_TX);
   delay(50);
   sendCommand("PING");
   sendCommand("STATUS");
@@ -48,7 +47,6 @@ void NanoLink::pause() {
 }
 
 void NanoLink::resume() {
-  _serial.listen();
   _paused = false;
   _length = 0;
   _line[0] = '\0';
