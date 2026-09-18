@@ -18,7 +18,7 @@ constexpr uint8_t MEMTYPE_FLASH = 'F';
 
 NanoFirmwareUpdater::NanoFirmwareUpdater(NanoLink& nanoLink)
   : _nano(nanoLink),
-    _bootSerial(PIN_NANO_PROG_RX, PIN_NANO_PROG_TX),
+    _bootSerial(1),
     _storageReady(false),
     _uploadReady(false),
     _firmwareSize(0) {
@@ -28,9 +28,9 @@ void NanoFirmwareUpdater::begin() {
   pinMode(PIN_NANO_RESET_GATE, OUTPUT);
   digitalWrite(PIN_NANO_RESET_GATE, LOW);  // reset released
 
-  _storageReady = LittleFS.begin();
+  _storageReady = LittleFS.begin(true);
   if (!_storageReady) {
-    setError(F("LittleFS mount failed; choose an ESP8266 flash layout with filesystem space"));
+    setError(F("LittleFS mount failed; use an ESP32 partition layout with filesystem space"));
   } else {
     LittleFS.remove(NANO_UPDATE_FILE);
     _lastError = "";
@@ -43,7 +43,7 @@ bool NanoFirmwareUpdater::beginUpload(const String& filename) {
   _lastError = "";
 
   if (!_storageReady) {
-    setError(F("ESP8266 filesystem is not available"));
+    setError(F("ESP32 filesystem is not available"));
     return false;
   }
 
@@ -76,7 +76,7 @@ bool NanoFirmwareUpdater::writeUpload(const uint8_t* data, size_t length) {
 
   const size_t written = _uploadFile.write(data, length);
   if (written != length) {
-    setError(F("Failed while storing Nano firmware on ESP8266"));
+    setError(F("Failed while storing Nano firmware on ESP32"));
     abortUpload();
     return false;
   }
@@ -217,8 +217,7 @@ bool NanoFirmwareUpdater::expectInSyncOk(unsigned long timeoutMs) {
 bool NanoFirmwareUpdater::syncBootloader(unsigned long baud) {
   _bootSerial.end();
   delay(5);
-  _bootSerial.begin(baud);
-  _bootSerial.listen();
+  _bootSerial.begin(baud, SERIAL_8N1, PIN_NANO_PROG_RX, PIN_NANO_PROG_TX);
 
   pulseReset();
   clearBootSerialInput();
