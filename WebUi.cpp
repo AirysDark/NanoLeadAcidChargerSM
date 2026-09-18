@@ -1,7 +1,7 @@
 #include "WebUi.h"
 #include "ChargerMonitorConfig.h"
 #include "NanoLink.h"
-#include "NetworkManager.h"
+#include "ChargerNetwork.h"
 
 namespace {
 
@@ -93,7 +93,7 @@ renderTerminal();refreshNow();setInterval(refreshNow,intervalMs);
 
 }
 
-WebUi::WebUi(NanoLink& nanoLink, NetworkManager& network)
+WebUi::WebUi(NanoLink& nanoLink, ChargerNetwork& network)
   : _nano(nanoLink),
     _network(network),
     _server(WEB_SERVER_PORT),
