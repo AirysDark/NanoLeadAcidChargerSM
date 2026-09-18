@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <WebServer.h>
+#include <Update.h>
 #include "NanoFirmwareUpdater.h"
 
 class NanoLink;
