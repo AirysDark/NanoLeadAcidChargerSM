@@ -1,11 +1,11 @@
 #include "ChargerMonitorConfig.h"
 #include "Debug.h"
 #include "NanoLink.h"
-#include "NetworkManager.h"
+#include "ChargerNetwork.h"
 #include "WebUi.h"
 
 NanoLink nanoLink;
-NetworkManager network;
+ChargerNetwork network;
 WebUi webUi(nanoLink, network);
 
 void setup() {
