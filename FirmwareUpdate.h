@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include <ESP8266WebServer.h>
+#include <WebServer.h>
 #include "NanoFirmwareUpdater.h"
 
 class NanoLink;
@@ -9,11 +9,11 @@ class FirmwareUpdate {
 public:
   explicit FirmwareUpdate(NanoLink& nanoLink);
 
-  void begin(ESP8266WebServer& server);
+  void begin(WebServer& server);
   void update();
 
 private:
-  ESP8266WebServer* _server;
+  WebServer* _server;
   NanoFirmwareUpdater _nanoUpdater;
 
   bool _espUploadStarted;
