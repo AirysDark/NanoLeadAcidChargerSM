@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include <SoftwareSerial.h>
+#include <HardwareSerial.h>
 #include "ChargerMonitorConfig.h"
 
 struct ChargerStatus {
@@ -57,9 +57,8 @@ public:
   void update();
   void sendCommand(const String& command);
 
-  // The firmware updater temporarily takes over a second SoftwareSerial UART
-  // connected to Nano D0/D1. Pausing stops normal STATUS polling and releases
-  // the active SoftwareSerial listener until resume() restores it.
+  // The firmware updater uses a separate hardware UART connected to Nano D0/D1.
+// Pausing only stops normal STATUS polling while the Nano is being reflashed.
   void pause();
   void resume();
   bool paused() const;
@@ -70,7 +69,7 @@ public:
   const String& lastLine() const;
 
 private:
-  SoftwareSerial _serial;
+  HardwareSerial _serial;
   char _line[NANO_LINE_BUFFER_SIZE];
   size_t _length;
   unsigned long _lastPollMs;
