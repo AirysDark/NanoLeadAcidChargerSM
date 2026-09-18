@@ -7,7 +7,7 @@ void begin() {
   if (!ENABLE_DEBUG) return;
   Serial.begin(DEBUG_BAUD);
   Serial.println();
-  Serial.println(F("NanoLeadAcidChargerSM ESP8266 starting"));
+  Serial.println(F("NanoLeadAcidChargerSM ESP32-WROOM starting"));
 }
 
 void print(const __FlashStringHelper* message) {
